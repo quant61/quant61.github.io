@@ -1,0 +1,73 @@
+<h1>Binary View Demo</h1>
+<p>
+  Multiple views on the same buffer
+</p>
+<div id="div0"></div>
+
+<style>
+*{
+  box-sizing: border-box;
+}
+</style>
+
+
+<script>
+var buf = new ArrayBuffer(8);
+var view = new DataView(buf);
+var div0 = document.getElementById('div0');
+
+initRows('Int', [8,16,32]);
+initRows('Uint', [8,16,32]);
+initRows('Float', [32, 64]);
+
+sync();
+function initRows(type, sizes){
+  sizes.forEach(function(size){
+    initRow(type, size);
+  });
+}
+// TODO: add bits
+// TODO: show both BE and LE versions
+
+function initRow(type, size){
+  var div = createElement('div');
+  div.appendChild(createElement('h2', type + size))
+  div0.appendChild(div);
+  for(i=0;i<64;i+=size){
+    var input = createElement('input');
+    input.onchange = onChange;
+    input.setAttribute('sync-type', type + size);
+    input.setAttribute('sync-pos', i / 8);
+    input.style.width = (size * 8) + 'px';
+    div.appendChild(input);
+  }
+}
+
+function createElement(tag, payload){
+  var element = document.createElement(tag);
+  if(typeof payload === 'string'){
+    element.innerHTML = payload;
+  }
+  return element;
+}
+
+function onChange(e){
+  var input = e.target;
+  var fn  = 'set' + input.getAttribute('sync-type');
+  var pos = input.getAttribute('sync-pos');
+  view[fn](pos, input.value);
+  sync();
+}
+
+
+function sync(){
+  var inputs = document.querySelectorAll('input');
+  for(i=0;i<inputs.length;i++){
+    var input = inputs[i];
+    console.log(input);
+    var fn  = 'get' + input.getAttribute('sync-type');
+    var pos = input.getAttribute('sync-pos');
+    input.value = view[fn](pos);
+  }
+}
+</script>
