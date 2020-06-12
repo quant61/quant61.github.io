@@ -1,0 +1,104 @@
+
+<style>
+
+td{
+    border: 1px solid;
+}
+table{
+    border-collapse: collapse;
+}
+
+.td0{
+    background: #77f;
+}
+
+</style>
+
+
+<table id="table0">
+
+
+
+
+
+
+</table>
+
+
+
+
+<script>
+
+
+class groupsMap extends Map{
+    push(key, ...values){
+        if(!this.has(key)) this.set(key, []);
+        this.get(key).push(...values);
+    }
+    printGroup(key){
+        var group = this.get(key);
+        if(!group) return '';
+        return group.map(x=> `"${x}"`);
+    }
+}
+
+
+
+var levels = new groupsMap;
+var states = [];
+var table0 = document.getElementById('table0');
+let tr = document.createElement('tr');
+for(i=-61;i<61;i++){
+    let th = document.createElement('th');
+    th.innerHTML = i;
+    tr.appendChild(th);
+}
+table0.appendChild(tr);
+
+
+
+
+console.log(Date.now());
+for(i=1; i<1000; i++){
+    levels.push(0, i);
+    levels = step(levels);
+    states.push(levels);
+    let tr = document.createElement('tr');
+    for(j=-61;j<61;j++){
+        var td = document.createElement('td');
+        td.classList.add('td' + j);
+        td.title = [i, j];
+        td.innerHTML = levels.printGroup(j);
+        tr.appendChild(td);
+    }
+    table0.appendChild(tr);
+}
+console.log(Date.now());
+
+
+
+function step(levels){
+    var newLevels = new groupsMap;
+    levels.forEach(function(group, id){
+        if(!group.length) return;
+        group = group.sort((a,b)=>a-b);
+        var sz = Math.round(group.length / 3);
+        var [a, b, c] = [0, sz, group.length - sz];
+        newLevels.push(id - 1, ...group.slice(a, b));
+        newLevels.push(id    , ...group.slice(b, c));
+        newLevels.push(id + 1, ...group.slice(c   ));
+    });
+    return newLevels;
+}
+
+
+
+
+
+
+
+
+
+
+
+</script>

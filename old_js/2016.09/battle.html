@@ -1,0 +1,208 @@
+<script>
+
+
+
+
+
+var app = {};
+
+
+app.creatures = [];
+
+var paramsNames = [
+'maxHP', 'DMG', 'armor',
+'accuracy', 'dodge', 'initiative',
+'fertile', 'career', 'duel'
+];
+
+
+function randShift(x){
+    var ans = x;
+    ans += Math.random();
+    ans -= Math.random();
+    if(ans<0) ans=0;
+    return ans;
+}
+
+function randTo(x){
+    return Math.random() * x;
+}
+
+function randEl(arr, self){
+    var item = arr[Math.random()*arr.length|0];
+    if(item == self){
+        return randEl(arr, self);
+    }
+}
+
+function hit(src, dst){
+
+}
+
+
+
+function mkCreature(params = {}){
+    var default_ = params.default || 1;
+    var creature = {};
+    paramsNames.forEach(function(param){
+        creature[param] = params[param];
+        if(!creature[param]) creature[param] = default_;
+    });
+    creature.curHP = creature.maxHP;
+    return creature;
+}
+
+
+function creatureFromParent(parent){
+    var creature = {};
+    paramsNames.forEach(function(param){
+        creature[param] = randShift(parent[param]);
+    });
+    return creature;
+}
+
+
+function reproduce(app){
+    var len = app.creatures.length;
+    for(var i=0;i<len;i++){
+        var parent = app.creatures[i];
+        var fertile = parent.fertile;
+        while(Math.random()*fertile > Math.random()){
+            var child = creatureFromParent(parent);
+            console.log('new born from', i);
+            app.creatures.push(child);
+        }
+    }
+}
+
+function startBattle(app){
+    var len = app.creatures.length;
+    for(var i=0;i<len;i++){
+        var creature = app.creatures[i];
+        creature.ATB = Math.random();
+    }
+    app.time = 0;
+}
+
+function nextHit(app){
+    var dt = Infinity, index = -1;
+    var len = app.creatures.length;
+    for(var i=0;i<len;i++){
+        var creature = app.creatures[i];
+        if((1 - creature.ATB ) / creature.initiative < dt ){
+            index = i;
+            dt = (1 - creature.ATB ) / creature.initiative;
+        }
+    }
+    app.time += dt;
+    app.creatures.forEach(function(creature){
+        creature.ATB += dt * creature.initiative;
+    });
+    app.creatures[index].ATB = 0;
+    return {
+        time: app.time,
+        index: index,
+    };
+}
+
+function battle(app){
+    startBattle(app);
+    while(app.time < 1){
+        var next = nextHit(app);
+
+        console.log(next);
+    }
+}
+
+
+
+app.creatures.push(mkCreature());
+reproduce(app);
+reproduce(app);
+reproduce(app);
+battle(app);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>

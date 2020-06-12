@@ -1,0 +1,116 @@
+
+
+<div style="width: 1000px; height: 300px">
+    <canvas id="myChart" width="400" height="400"></canvas>
+</div>
+
+
+
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.6.0/Chart.bundle.js"
+        integrity="sha256-eetZG6Bzom5c8rWDuJiky3M1sJ3IGwNd/FIl/nmyMh0="
+        crossorigin="anonymous">
+
+</script>
+<script>
+	var count = 1000;
+	var dimensions = 300;
+
+    function getDistance(a,b) {
+        var sqr = 0;
+        for(var i = 0;i<a.length;i++){
+            sqr += Math.pow(a[i] - b[i], 2);
+        }
+        return Math.sqrt(sqr);
+    }
+
+
+    var points = [];
+
+    function makePoint() {
+        var point = [];
+        for(var i = 0;i<dimensions;i++){
+            point[i] = Math.random();
+        }
+        return point;
+    }
+
+
+    function makeRange(start, end, step) {
+        var result = [];
+        for(x=start;x<end;x+=step){
+            result.push(x);
+        }
+        return result;
+    }
+
+
+
+    for(var i=0;i<count;i++){
+        points.push(makePoint());
+    }
+
+
+
+    var distances = [];
+
+    for(var i=0;i<points.length - 1;i++){
+        for(var j = i + 1; j < points.length;j++) {
+            distances.push({
+                i: i,
+                j: j,
+                d: getDistance(points[i], points[j])
+            });
+        }
+    }
+    distances = distances.sort(function(a,b){
+    	return a.d - b.d;
+    });
+
+
+
+    var chartData = new Int32Array(100);
+    for(var i=0;i<distances.length;i++){
+        chartData[Math.floor(distances[i].d * 10)] += 1;
+    }
+
+
+    var ctx = document.getElementById("myChart").getContext('2d');
+    var myChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: makeRange(0,100, 1).map(function (x) {
+                return x/10;
+            }),
+            datasets: [{
+                label: '# of distances',
+                fillColor: "rgba(220,220,220,0.2)",
+                strokeColor: "rgba(220,220,220,1)",
+                pointColor: "rgba(220,220,220,1)",
+                pointStrokeColor: "#fff",
+                pointHighlightFill: "#fff",
+                pointHighlightStroke: "rgba(220,220,220,1)",
+                data: chartData
+//                data: [1,2,3,1]
+            }]
+        }
+    });
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+
+
+
+

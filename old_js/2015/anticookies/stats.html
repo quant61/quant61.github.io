@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en" ng-app>
+<head>
+  <meta charset="utf-8">
+  <title>AntiCookieClicker</title>
+  <!-- note from 2020: it had local angular.js, but I replaced it with cdn link -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.2.21/angular.min.js"></script>
+  <style>
+  .table0{
+	border-spacing:0;
+  }
+
+  .built{
+  	background: #ff0;
+  }
+  </style>
+
+
+</head>
+<body>
+
+
+
+<div ng-app ng-controller="Controller">
+  <h2>Статистика</h2>
+
+  <p>
+  	<span ng-repeat="p in pages">
+		<a href="" ng-click="current.page = p">
+  			{{p}}
+	  	</a>
+	  	-
+  	</span>
+  </p>
+
+
+  <select ng-model="current.type">
+  	<option value="cheapestStats">Самое дешёвое здание</option>
+  	<option value="bestStats">Самое лучшее здание</option>
+  </select>
+  Страница {{current.page}}
+
+
+  <div>
+	<table class="table0" border="1">
+	  <thead>
+	  	<tr>
+	  		<th>Всего зданий</th>
+	  		<th>Время</th>
+	  		<th>Последняя покупка</th>
+	  		<th>Доход</th>
+	  		<th>Типов зданий</th>
+	  		<th ng-repeat="name in names" title="{{name}}">
+	  			№ {{$index}}
+	  		</th>
+	  	</tr>
+	  </thead>
+	  <tbody>
+		<tr ng-repeat="state in getStats(current.page, current.type)">
+		  	<td>{{state.totalBuildings}}</td>
+		  	<td>{{state.time * 1000 | date: 'yyyy-MMM-dd HH:mm:ss'}}</td>
+		  	<td>{{state.lastCost}}</td>
+		  	<td>{{state.totalIncome}}</td>
+		  	<td>{{state.buildings.length}}</td>
+		  	<td ng-repeat="count in state.buildings track by $index" 
+		  		ng-class="{built: state.lastIndex == $index}"
+				title="{{getName([$index])}}"
+				ng-if="count">
+		  		{{count}}
+		  	</td>
+		</tr>
+	  </tbody>
+	</table>
+</div>
+
+<script type="text/javascript">
+
+var names = [
+'скамейка c семечками',
+'шашлычная с заднего двора',
+'курятник',
+'точка на рынке',
+'игра "3 напёрстка"',
+'ларёк-шмарёк',
+'магазин "продукты у Ашота"',
+'лавка сапожника',
+'парикмахерская "аля франсе"',
+'засранный магнит',
+'отмытый магнит',
+'сеть автомоек "мистер-чистер"',
+'подпотолочный наркопритон',
+'бордель "у Маруси"',
+'рынок "счастливая курица"',
+'сервисн-центр "Toyota-Ferrary-unlimited-JT"',
+'бараки скелетов',
+'фабрика по сборке танков АрматА',
+'сеть модных бутиков "У Рэрити, что-ли"',
+'коммерческий космический лифт',
+'элитная женская академия "ле бля дэ"',
+'мухомор софт.ру',
+'частная военная корпорация "Сейлормун"',
+'ресторан "в конце времён"',
+'ферма по выращиванию клонов-штурмовиков',
+'Planet Express',
+'личная армия боевых котиков',
+'хуApple'
+];
+var x;
+
+var data = [];
+
+
+var exp = Math.exp;
+var pow = Math.pow;
+
+
+
+function initState(){
+	return {
+			money: 0,
+			time: 0,
+			buildings: [1]
+	}
+}
+
+function getCost(state, index){
+	var count = state.buildings[index] || 0;
+	return Math.pow(2, count/12) * Math.pow(2 * Math.PI, index);
+}
+
+function getTotalIncome(state){
+	return state.buildings.reduce(function(sum, count, index){		
+		return sum + count * Math.exp(index);
+	},0);
+}
+
+
+function update(state, dt){
+	state.time += dt;
+	state.money += dt * getTotalIncome(state);
+	while(getCost(state, state.buildings.length) < 4 * state.money){
+		state.buildings.push(0);
+	}
+}
+
+
+function build(state, index){
+	var cost = getCost(state, index);
+	if(cost <= state.money){
+		state.money -= cost;
+		state.buildings[index]++;
+	}
+}
+
+
+
+function getCheapestIndex(state){
+	var b = state.buildings;
+	var currentCost  = Infinity;
+	var currentIndex = -1;
+	for(var i=0;i<b.length;i++){
+		if(getCost(state,i) <= currentCost){
+			currentCost  = getCost(state,i);
+			currentIndex = i;	
+		}
+	}
+	return currentIndex;
+}
+
+function getBestIndex(state){
+	var b = state.buildings;
+	var current  = Infinity;
+	var currentIndex = -1;
+	for(var i=0;i<b.length;i++){
+		if(getCost(state,i) / Math.exp(i) <= current){
+			current = getCost(state,i) / Math.exp(i);
+			currentIndex = i;	
+		}
+	}
+	return currentIndex;
+}
+
+
+
+
+
+function Controller($scope) {
+	$scope.names = names;
+
+	$scope.getName = function(i){
+		return names[i] || "Здание №"+i;
+	}
+
+
+	console.log(Date.now());
+
+	var bestStats = $scope.bestStats = [initState()]
+	for(var i=0;i<1e4;i++){
+		var state = bestStats[i];
+		state = angular.copy(state);
+		var index = getBestIndex(state);
+
+		var cost = getCost(state, index);
+		var diff = cost - state.money;
+		var diffTime = diff / getTotalIncome(state) + 0.1;
+
+		update(state, diffTime);
+		build(state, index);
+
+		state.lastCost = cost;
+		state.lastIndex = index;
+		state.totalIncome = getTotalIncome(state);
+		state.totalBuildings = state.buildings.reduce(function(sum,current){return sum+current});
+		bestStats.push(state);
+	}
+
+	var cheapestStats = $scope.cheapestStats = [initState()]
+
+	for(var i=0;i<1e4;i++){
+		var state = cheapestStats[i];
+		state = angular.copy(state);
+		var index = getCheapestIndex(state);
+
+		var cost = getCost(state, index);
+		var diff = cost - state.money;
+		var diffTime = diff / getTotalIncome(state) + 0.1;
+
+		update(state, diffTime);
+		build(state, index);
+
+		state.lastCost = cost;
+		state.lastIndex = index;
+		state.totalIncome = getTotalIncome(state);
+		state.totalBuildings = state.buildings.reduce(function(sum,current){return sum+current});
+		cheapestStats.push(state);
+	}
+
+
+
+
+	console.log(Date.now());
+
+
+
+	$scope.current = {page:0, type: 'cheapestStats'};
+
+	$scope.pages = [];
+
+	for(var i=0;i<100;i++){
+		$scope.pages.push(i);
+	}
+
+
+
+	$scope.getStats = function(page, type){
+		var stats = [];
+		for(var i=0;i<100;i++){
+			stats.push($scope[type][i + page * 100]);
+		}
+		return stats;
+	}
+
+}
+
+
+
+
+</script>
+
+
+
+
+</body>
+</html> 

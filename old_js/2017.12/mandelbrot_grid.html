@@ -1,0 +1,355 @@
+<html>
+
+<head>
+  <!-- based on http://learningwebgl.com/lessons/example01/-->
+  <title>Mandelbrot with grid</title>
+  <script id="shader-fs" type="x-shader/x-fragment">
+  precision highp float;
+  uniform float gridStep;
+
+  varying vec2 vPosition;
+
+  void main(void) {
+    float cx = vPosition.x;
+    float cy = vPosition.y;
+
+    float hue;
+    float saturation;
+    float value;
+    float hueRound;
+    int hueIndex;
+    float f;
+    float p;
+    float q;
+    float t;
+
+
+    float x = 0.0;
+    float y = 0.0;
+    float tempX = 0.0;
+    int i = 0;
+    int runaway = 0;
+    for (int i=0; i < 9000; i++) {
+      tempX = x * x - y * y + float(cx);
+      y = 2.0 * x * y + float(cy);
+      x = tempX;
+      if (runaway == 0 && x * x + y * y > 100.0) {
+        runaway = i;
+      }
+    }
+    if (runaway != 0) {
+      hue = float(runaway) / 200.0;
+      saturation = 0.6;
+      value = 1.0;
+
+      hueRound = hue * 6.0;
+      hueIndex = int(mod(float(int(hueRound)), 6.0));
+      f = fract(hueRound);
+      p = value * (1.0 - saturation);
+      q = value * (1.0 - f * saturation);
+      t = value * (1.0 - (1.0 - f) * saturation);
+
+      if (hueIndex == 0)
+        gl_FragColor = vec4(value, t, p, 1.0);
+      else if (hueIndex == 1)
+        gl_FragColor = vec4(q, value, p, 1.0);
+      else if (hueIndex == 2)
+        gl_FragColor = vec4(p, value, t, 1.0);
+      else if (hueIndex == 3)
+        gl_FragColor = vec4(p, q, value, 1.0);
+      else if (hueIndex == 4)
+        gl_FragColor = vec4(t, p, value, 1.0);
+      else if (hueIndex == 5)
+        gl_FragColor = vec4(value, p, q, 1.0);
+
+    } else {
+      gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    }
+    // draw grid: full image is 1000x1000 px of 10x10 cells by 100x100 pixels
+    // it helps locate position of any object in mandelbrot set
+    if(mod(cx, gridStep) < gridStep / 100.0 || mod(cy, gridStep) < gridStep / 100.0){
+          gl_FragColor = vec4(0.5, 0.5, 0.5, 1.0);
+    }
+  }
+</script>
+
+  <script id="shader-vs" type="x-shader/x-vertex">
+  precision highp float;
+  attribute vec2 aVertexPosition;
+  attribute vec2 aPlotPosition;
+
+  varying vec2 vPosition;
+
+  void main(void) {
+    gl_Position = vec4(aVertexPosition, 1.0, 1.0);
+    vPosition = aPlotPosition;
+  }
+</script>
+
+
+  <script type="text/javascript">
+
+      var gl;
+      function initGL(canvas) {
+          try {
+              gl = canvas.getContext("webgl");
+              gl.viewportWidth = canvas.width;
+              gl.viewportHeight = canvas.height;
+          } catch(e) {
+          }
+          if (!gl) {
+              alert("Could not initialise WebGL, sorry :-(");
+          }
+      }
+
+
+      function getShader(gl, id) {
+          var shaderScript = document.getElementById(id);
+          if (!shaderScript) {
+              return null;
+          }
+
+          var str = "";
+          var k = shaderScript.firstChild;
+          while (k) {
+              if (k.nodeType == 3) {
+                  str += k.textContent;
+              }
+              k = k.nextSibling;
+          }
+
+          var shader;
+          if (shaderScript.type == "x-shader/x-fragment") {
+              shader = gl.createShader(gl.FRAGMENT_SHADER);
+          } else if (shaderScript.type == "x-shader/x-vertex") {
+              shader = gl.createShader(gl.VERTEX_SHADER);
+          } else {
+              return null;
+          }
+
+          gl.shaderSource(shader, str);
+          gl.compileShader(shader);
+
+          if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+              alert(gl.getShaderInfoLog(shader));
+              return null;
+          }
+
+          return shader;
+      }
+
+
+      var shaderProgram;
+      var aVertexPosition;
+      var aPlotPosition;
+      var gridStep;
+      function initShaders() {
+
+          var fragmentShader = getShader(gl, "shader-fs");
+          var vertexShader = getShader(gl, "shader-vs");
+
+          shaderProgram = gl.createProgram();
+          gl.attachShader(shaderProgram, vertexShader);
+          gl.attachShader(shaderProgram, fragmentShader);
+          gl.linkProgram(shaderProgram);
+
+          if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+              alert("Could not initialise shaders");
+          }
+
+          gl.useProgram(shaderProgram);
+
+          aVertexPosition = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+          gl.enableVertexAttribArray(aVertexPosition);
+
+          aPlotPosition = gl.getAttribLocation(shaderProgram, "aPlotPosition");
+          gl.enableVertexAttribArray(aPlotPosition);
+
+          gridStep = gl.getUniformLocation(shaderProgram, "gridStep");
+
+      }
+
+
+      var centerOffsetX = 0;
+      var centerOffsetY = 0;
+
+      var zoom;
+      var zoomCenterX;
+      var zoomCenterY;
+
+      var vertexPositionBuffer;
+      function initBuffers() {
+          vertexPositionBuffer = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
+          var vertices = [
+              -1.0,  1.0,
+               1.0,  1.0,
+              -1.0, -1.0,
+               1.0, -1.0,
+          ];
+          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+          vertexPositionBuffer.itemSize = 2;
+          vertexPositionBuffer.numItems = 4;
+      }
+
+
+      function drawScene() {
+          gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+          gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+          gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
+          gl.vertexAttribPointer(aVertexPosition, vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+
+          var plotPositionBuffer = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, plotPositionBuffer);
+          var cornerIx;
+          corners = [];
+          var x0 = getInputValue('X0');
+          var y0 = getInputValue('Y0');
+          var zoom = Math.pow(0.1, getInputValue('ZOOM'));
+          var corners = new Float32Array(4 * 2);
+          for(let i=0;i<8;i++){
+              corners[i] = Boolean(i&1)? y0 : x0;
+              if((i&3) === 2 || (i&5) === 5){
+                  corners[i] += zoom;
+              }
+          }
+
+
+          gl.bufferData(gl.ARRAY_BUFFER, corners, gl.STATIC_DRAW);
+          gl.vertexAttribPointer(aPlotPosition, 2, gl.FLOAT, false, 0, 0);
+
+          gl.uniform1f(gridStep, zoom / 10);
+
+
+
+          gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+          gl.deleteBuffer(plotPositionBuffer);
+
+          // zoom *= 1.02;
+          // document.getElementById("zoomOutput").value = zoom;
+          // if (centerOffsetX != zoomCenterX) {
+          //     centerOffsetX += (zoomCenterX - centerOffsetX) / 20;
+          // }
+          // document.getElementById("centerOffsetXOutput").value = centerOffsetX;
+          //
+          // if (centerOffsetY != zoomCenterY) {
+          //     centerOffsetY += (zoomCenterY - centerOffsetY) / 20;
+          // }
+          // document.getElementById("centerOffsetYOutput").value = centerOffsetY;
+
+          drawGrid();
+      }
+
+      function drawGrid() {
+          // var canvas = document.getElementById("example01-canvas");
+          // var ctx = canvas.getContext('2d');
+          // console.log(ctx);
+          // for(let i=0;i<10;i++){
+          //     ctx.moveTo(    0, 100*i);
+          //     ctx.lineTo( 1000, 100*i);
+          //     ctx.moveTo(100*i,     0);
+          //     ctx.lineTo(100*i,  1000);
+          // }
+      }
+
+
+      function resetZoom() {
+          zoom = 1.0;
+          zoomCenterX = 0;
+          zoomCenterY = 0;
+      }
+
+
+      function webGLStart() {
+          resetZoom();
+
+          var canvas = document.getElementById("canvas0");
+          initGL(canvas);
+          initShaders();
+          initBuffers();
+
+          gl.clearColor(0.0, 0.0, 0.0, 1.0);
+          drawScene();
+      }
+
+      function getInputValue(element){
+          if(typeof element === 'string'){
+              return document.getElementById(element).value;
+          } else if(element instanceof HTMLInputElement){
+              return element.value;
+          }
+      }
+      function setInputValue(element, value){
+          if(typeof element === 'string'){
+              document.getElementById(element).value = value;
+          } else if(element instanceof HTMLInputElement){
+              element.value = value;
+          }
+      }
+
+      function moveByCells(dx, dy) {
+          var x0 = Number(getInputValue('X0'));
+          var y0 = Number(getInputValue('Y0'));
+          var zoom = Math.pow(0.1, getInputValue('ZOOM')) / 10;
+
+          setInputValue('X0', x0 + dx * zoom);
+          setInputValue('Y0', y0 + dy * zoom);
+          drawScene();
+      }
+
+
+  </script>
+
+  <style>
+    .settings{
+      display: inline-block;
+      vertical-align: top;
+    }
+    canvas{
+      border: none;
+    }
+    body{
+      margin: 0;
+    }
+  </style>
+
+</head>
+
+
+<body onload="webGLStart();">
+
+<canvas id="canvas0" width="1000" height="1000"></canvas>
+<div class="settings">
+  <h2>Inputs</h2>
+  <form name="inputs" onsubmit="drawScene();return false">
+    <p>
+      Left Corner <br />
+      X <input type="text" id="X0" value="-2" />
+      Y <input type="text" id="Y0" value="-2" />
+      <br>
+      Zoom <input type="text" id="ZOOM" value="-1" />
+    <p>
+      <input type="submit" value="Draw Scene"/>
+  </form>
+  <button onclick="moveByCells(-1,  0)">Left</button>
+  <button onclick="moveByCells(+1,  0)">Right</button>
+  <button onclick="moveByCells( 0, -1)">Up</button>
+  <button onclick="moveByCells( 0, +1)">Down</button>
+
+  TODO:
+  <ul>
+    <li>move by 1 cell by arrow buttons</li>
+    <li>go to cell by clicking it</li>
+  </ul>
+
+
+
+  <br/>
+  <a href="http://learningwebgl.com/lessons/example01/">based on this example</a>
+</div>
+</body>
+
+</html>

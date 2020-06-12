@@ -1,0 +1,87 @@
+
+<canvas id="canv0"></canvas>
+<script type="text/javascript">
+
+document.body.style.margin = 0;
+
+var canv0 = document.getElementById("canv0");
+var ctx   = canv0.getContext('2d');
+
+var size  = 5;
+var rows  = 100;
+var cols  = 100;
+
+
+canv0.width  = size * cols;
+canv0.height = size * rows;
+
+
+for(i=0;i<=rows;i++){
+    ctx.moveTo(i*size, 0);
+    ctx.lineTo(i*size, cols * size);
+}
+for(i=0;i<=cols;i++){
+    ctx.moveTo(          0, i*size);
+    ctx.lineTo(rows * size, i*size);
+}
+ctx.stroke();
+
+
+// ctx.fillStyle
+
+var colors = [
+    '#000',
+    '#fff',
+    '#0f0',
+    '#00f',
+];
+
+var map = [];
+for(i=0;i<=rows;i++){
+    map[i] = [];
+    for(j=0;j<=cols;j++){
+        map[i][j] = Math.random() * 1.7 | 0;
+        ctx.fillStyle = colors[map[i][j]];
+        ctx.fillRect(j*size+1, i*size+1, size-1, size-1);
+    }
+}
+
+
+
+var clusters = [];
+var clusterIndices = Array(rows).fill(0).map(()=>Array(cols).fill(-1));
+
+for(let i=0;i<rows;i++){
+    for(let j=0;j<cols;j++){
+        if(clusterIndices[i][j] == -1){
+            clusters[clusters.length] = 0;
+            addNeibors(i, j, clusters.length - 1, map[i][j]);
+        }
+    }
+}
+
+function addNeibors(i, j, index, color){
+    // console.log(i, j, index, color);
+    if( (map[i][j] !== color) || (clusterIndices[i][j] > -1)){
+        return;
+    }
+    clusters[index]++;
+    clusterIndices[i][j] = index;
+    if(i>0)      addNeibors(i-1, j  , index, color);
+    if(j>0)      addNeibors(i  , j-1, index, color);
+    if(i<rows-1) addNeibors(i+1, j  , index, color);
+    if(j<cols-1) addNeibors(i  , j+1, index, color);
+}
+
+
+
+
+
+
+
+
+
+</script>
+
+
+

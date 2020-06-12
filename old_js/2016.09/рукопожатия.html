@@ -1,0 +1,133 @@
+
+<script type="text/javascript">
+var nodes = [];
+var edges = [];
+var N = 1000;
+var E = 2000;
+
+function randomElement (array) {
+    return array[Math.random()*array.length|0];
+}
+
+// generate nodes;
+for(var i=0;i<N;i++){
+    nodes.push({
+        id: i,
+        name: 'node' + i,
+        friends: []
+    });
+}
+// join nodes
+for(var i=0;i<E;i++){
+    var edge = {};
+    edge.from = randomElement(nodes);
+    edge.to   = randomElement(nodes);
+
+    edge.from.friends.push(edge.to);
+    edge.to.friends.push(edge.from);
+}
+
+// make distances map
+var map = Array(N).fill(0).map((x,i)=>Array(N).fill(i).map((x,j)=>i==j?0:Infinity));
+
+var pathes = nodes.map(x=>({
+    start: x,
+    length: 0,
+    end: x,
+}));
+while(pathes.length){
+    let newPathes = [];
+    let from, that, next;
+    let path;
+    let i,j,l;
+
+    console.log(pathes.length, 'pathes, length:', pathes[0].length, performance.now());
+    for(path of pathes){
+        from = path.start;
+        that = path.end;
+        l = path.length + 1;
+        // console.log('from', from.id, that.id);
+        for(next of that.friends){
+            i = from.id;
+            j = next.id;
+            if(map[i][j] > l){
+                // console.log('new', i, j, map[i][j], path.path.length);
+                map[i][j] = l;
+                newPathes.push({
+                    start: path.start,
+                    length: l,
+                    end: next,
+                });
+            } else {
+                // console.log('already', that.id, next.id, map[that.id][next.id]);
+            }
+        }
+    }
+    // if(!newPathes.length){
+    //     console.log(pathes.length);
+    //     console.table(pathes.map(x=>[x.start.id,x.end.id]));
+    // }
+    pathes = newPathes;
+}
+
+var clusterIndices = Array(N).fill(-1);
+var clusters = [];
+
+while(clusterIndices.indexOf(-1) > -1){
+    let clusterStart = clusterIndices.indexOf(-1);
+    ///////////////////             write ids in elemets then find < inf then index
+    let cluster = map[clusterStart].map((x,i)=>[x,i]).filter(x=>x[0]<1/0).map(x=>x[1]);
+    cluster.forEach(x=>{clusterIndices[x] = clusters.length});
+    clusters.push(cluster);
+}
+
+console.log(clusters.length, 'clusters');
+
+
+let foreverAlones = clusters.filter(x=>x.length == 1);
+if(foreverAlones.length){
+    console.log(foreverAlones.length, 'forever alone');
+    if(foreverAlones.length < 7){
+        console.log('forever alone:', ...foreverAlones.map(x=>x[0]));
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+// for(let l=1;l<100;l++){
+//     let count = 0;
+//     for(let j=0;j<100;j++){
+//         let from = nodes[j];
+//         for(let to of from.friends){
+//             if(map[from.id][to.id] > l){
+//                 count++;
+//                 map[from.id][to.id] = l;
+//             }
+//         }
+//     }
+//     console.log(l,count);
+//     if(!count){
+//         console.log()
+//         break;
+//     }
+// }
+
+
+
+
+
+
+
+
+
+
+</script>

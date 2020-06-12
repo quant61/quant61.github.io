@@ -1,0 +1,224 @@
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+<title>WebGL:Mandelbrot to Julia fractal morphing</title>
+
+<script id="shader-vs" type="x-shader/x-vertex"> 
+attribute vec3 vPos;
+
+void main(void) 
+{
+   gl_Position = vec4(vPos, 1.);
+}
+</script> 
+ 
+<script id="shader-fs" type="x-shader/x-fragment"> 
+
+precision highp float;
+
+uniform vec2 ComplexConstant;
+uniform float fViewportSize;
+uniform float blend;
+  
+void main(void) 
+{
+   const int nMaxIter = 128;
+   
+   float R = 3.5 * (gl_FragCoord.x - fViewportSize / 2.0)  / fViewportSize - 0.25;
+   float I = 3.5 * (gl_FragCoord.y - fViewportSize / 2.0)  / fViewportSize;
+   
+   
+   float Real0 = R;
+   float Imag0 = I;
+   
+   int LastIter;
+   float fRealConstant = blend * ComplexConstant.x + (1.0 - blend ) * Real0;
+   float fImagConstant = blend * ComplexConstant.y + (1.0 - blend ) * Imag0;
+   
+   float R2 = R*R; 
+   float I2 = I*I;
+   
+   for(int iter = 0; iter < nMaxIter; iter ++)
+   {
+		I=(R+R)*I + fImagConstant;
+		R=R2-I2 + fRealConstant;
+			
+		R2=R*R;
+		I2=I*I;
+		
+		LastIter = iter ;
+
+		if( R2+I2 > 4.0 ) 
+			break;
+	}
+	
+   if (LastIter  == nMaxIter-1) 
+		gl_FragColor = vec4(0., 0., 0., 1.);
+   else
+   {
+    float fValue = mod(float(LastIter),2.0);
+	float angle = 2.0 * 3.14 * float(LastIter) / float(nMaxIter) ;
+	gl_FragColor = vec4(1.0 - (0.5+0.5*cos(angle*2.0)),
+						1.0 - (0.5+0.5*cos(angle*3.0)),
+						1.0 - (0.5+0.5*cos(angle*5.0)), 
+						1.);
+   }
+}
+</script> 
+ 
+<script type="text/javascript"> 
+function getShader ( gl, id )
+{
+   var shaderScript = document.getElementById ( id );
+   var str = "";
+   var k = shaderScript.firstChild;
+   while ( k )
+   {
+     if ( k.nodeType == 3 ) str += k.textContent;
+     k = k.nextSibling;
+   }
+   var shader;
+   if ( shaderScript.type == "x-shader/x-fragment" )
+           shader = gl.createShader ( gl.FRAGMENT_SHADER );
+   else 
+	if ( shaderScript.type == "x-shader/x-vertex" )
+           shader = gl.createShader(gl.VERTEX_SHADER);
+   else 
+	return null;
+   gl.shaderSource(shader, str);
+   gl.compileShader(shader);
+   if (gl.getShaderParameter(shader, gl.COMPILE_STATUS) == 0)
+      alert(gl.getShaderInfoLog(shader));
+   return shader;
+}
+
+requestAnimFrame = function()
+{
+  return  window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || function(callback, element){ window.setTimeout(callback, 1000 / 60); }
+}();
+
+var gl, canvas;
+var cLoc, size, frames = 0, timer_fr, time, BlendLoc, Blend,ViewportSizeLoc;
+
+function Init() 
+{
+
+	/*
+	document.getElementById("Statut").textContent  = "Loading audio track........";
+ 
+	var audioElement = document.createElement("audio");
+    audioElement.setAttribute("src", "Quark.ogg");
+	audioElement.setAttribute("loop", "true");
+	audioElement.play();
+	*/
+	
+	
+   canvas = document.getElementById("canvas");
+   size = Math.min(window.innerWidth, window.innerHeight) - 35;
+   canvas.width =  size;   canvas.height = size;
+   if (!window.WebGLRenderingContext)
+   {
+     alert("Your browser does not support WebGL. See http://get.webgl.org");
+     return;
+	}
+  
+  try  { 
+	gl = canvas.getContext("experimental-webgl");
+	if (!gl) {
+		// if failed, try experimental one
+		gl = canvas.getContext("webgl");
+		if (!gl) {
+			alert("Your browser does not support WebGL");
+			return;
+		}
+	} 
+   }catch(e) {}
+   
+   gl.viewport(0, 0, size, size);
+
+   var prog  = gl.createProgram();
+   gl.attachShader(prog, getShader( gl, "shader-vs" ));
+   gl.attachShader(prog, getShader( gl, "shader-fs" ));
+   gl.linkProgram(prog);
+   gl.useProgram(prog);
+
+   var posAtrLoc = gl.getAttribLocation(prog, "vPos");
+   gl.enableVertexAttribArray( posAtrLoc );
+   var posBuffer = gl.createBuffer();
+   gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
+   var vertices = new Float32Array([-1.0,-1.0, 0.0,   1.0,-1.0, 0.0,   -1.0, 1.0, 0.0,  -1.0,1.0,0.0,   1.0,-1.0,0.0,    1.0,1.0,0.0]);
+   gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+   gl.vertexAttribPointer(posAtrLoc, 3, gl.FLOAT, false, 0, 0);
+   
+   cLoc = gl.getUniformLocation(prog,"ComplexConstant");
+   BlendLoc = gl.getUniformLocation(prog,"blend");
+   ViewportSizeLoc = gl.getUniformLocation(prog,"fViewportSize");
+   
+   gl.uniform1f( ViewportSizeLoc, size);
+   time = new Date().getTime();
+ 
+
+ 
+   timer_fr = setInterval(FramerateDisplay, 1000);
+   anim();
+
+  canvas.resize = function ()
+  {
+    var size = Math.min(window.innerWidth, window.innerHeight);
+    canvas.width =  size;   
+	canvas.height = size;
+	gl.uniform1f( ViewportSizeLoc, size);
+	
+    gl.viewport(0, 0, size, size);
+    drawScene();
+  }
+}
+
+function anim()
+{
+	var tim = new Date().getTime()/1000;
+	var Real = Math.sin(tim/4.1);
+	var Imag = Math.cos(tim/4.1);
+
+	var Blend = Math.sin(tim/3.1) * Math.cos(tim/5.2);
+
+
+	gl.uniform2f( cLoc, Real,Imag);
+	gl.uniform1f( BlendLoc, Blend);
+
+	drawScene();
+	frames++;
+	requestAnimFrame(anim);
+}
+
+function drawScene() 
+{
+   gl.drawArrays(gl.TRIANGLES, 0, 6);
+   gl.flush ();
+}
+
+function FramerateDisplay()
+{
+  var ti = new Date().getTime();
+  var fps = Math.round(1000*frames/(ti - time));
+  document.getElementById("framerate").textContent  = fps;
+  frames = 0;  
+  time = ti;
+}
+</script> 
+
+</head>
+<body onload="Init();" 
+onresize="canvas.resize();"
+>
+<audio src ="Quark.ogg" autoplay loop> </audio>
+<Font Color="#FFFFFF">
+<BODY BGCOLOR=Black>
+Real time fractal morphing - WebGL experiment : Code David Alloza - Music Pascal Ortega aka Lucifer. 
+<br> 
+<span  id="Statut"> </span>	Framerate : <span  id="framerate"> </span> FPS
+<br> 
+
+ <canvas id="canvas" width="600" height="600"></canvas>
+<a href="http://www.chromeexperiments.com/detail/fractal-morphing/"><img src="badge-black_black.png" alt="See my Experiment on ChromeExperiments.com" /></a>
+ 
+</body></html>

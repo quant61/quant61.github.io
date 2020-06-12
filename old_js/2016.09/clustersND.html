@@ -1,0 +1,57 @@
+
+<script type="text/javascript">
+
+var getNDArray = (N, x)=>N.length?(Array(N[0]).fill(0).map(()=>getNDArray(N.slice(1),x))):x;
+var sizes = [20,20,20];
+
+
+var map = getNDArray(sizes, null);
+for(i=0;i<sizes[0];i++)
+    for(j=0;j<sizes[1];j++)
+        for(k=0;k<sizes[2];k++){
+            map[i][j][k] = Math.random() * 2 | 0;
+        }
+
+
+
+var clusters = [];
+var clusterIndices = getNDArray(sizes, -1);
+
+for(i=0;i<sizes[0];i++)
+    for(j=0;j<sizes[1];j++)
+        for(k=0;k<sizes[2];k++){
+            if(clusterIndices[i][j][k] == -1){
+                clusters[clusters.length] = 0;
+                addNeibors(i, j, k, clusters.length - 1, map[i][j][k]);
+            }
+        }
+
+
+
+function addNeibors(i, j, k, index, color){
+    // console.log(i, j, index, color);
+    if( (map[i][j][k] !== color) || (clusterIndices[i][j][k] > -1)){
+        return;
+    }
+    clusters[index]++;
+    clusterIndices[i][j][k] = index;
+    if(i>0)          addNeibors(i-1, j  , k  , index, color);
+    if(j>0)          addNeibors(i  , j-1, k  , index, color);
+    if(k>0)          addNeibors(i  , j  , k-1, index, color);
+    if(i<sizes[0]-1) addNeibors(i+1, j  , k  , index, color);
+    if(j<sizes[1]-1) addNeibors(i  , j+1, k  , index, color);
+    if(k<sizes[2]-1) addNeibors(i  , j  , k+1, index, color);
+}
+
+
+
+
+
+
+
+
+
+</script>
+
+
+

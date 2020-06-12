@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en" ng-app>
+<head>
+  <meta charset="utf-8">
+  <title>AntiCookieClicker</title>
+  <!-- note from 2020: it had local angular.js, but I replaced it with cdn link -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.2.21/angular.min.js"></script>
+  <style>
+  .table0{
+	border-spacing:0;
+
+
+  }
+
+
+  </style>
+
+
+</head>
+<body>
+
+
+
+
+
+
+
+
+<div ng-app ng-controller="Controller">
+  <h2>AntiCookieClicker</h2>
+  <h4>Денег: {{state.money.toLocaleString()}}</h4>
+  <h4>Доход: {{getIncome().toLocaleString()}}</h4>
+  <div>
+	<table class="table0" border="1">
+	  <thead>
+	  	<tr>
+	  		<td>Тип здания</td>
+	  		<td>Количество</td>
+	  		<td>Доход</td>
+	  		<td>Цена</td>
+	  		<td></td>
+	  	</tr>
+	  </thead>
+	  <tr ng-repeat="b in state.buildings track by $index">
+		  <td>{{names[$index]}}</td>
+		  <td>{{b}}</td>
+		  <td>{{exp($index).toLocaleString()}}</td>
+		  <td>{{cost($index, b).toLocaleString()}}</td>
+		  <td>
+		  	<button ng-click="buy($index)">
+		  		Купить
+		  	</button>
+		  </td>
+	  </tr>
+	</table>
+</div>
+
+<script type="text/javascript">
+
+var names = [
+'скамейка c семечками',
+'шашлычная с заднего двора',
+'курятник',
+'точка на рынке',
+'игра "3 напёрстка"',
+'ларёк-шмарёк',
+'магазин "продукты у Ашота"',
+'лавка сапожника',
+'парикмахерская "аля франсе"',
+'засранный магнит',
+'отмытый магнит',
+'сеть автомоек "мистер-чистер"',
+'подпотолочный наркопритон',
+'бордель "у Маруси"',
+'рынок "счастливая курица"',
+'сервисн-центр "Toyota-Ferrary-unlimited-JT"',
+'бараки скелетов',
+'фабрика по сборке танков АрматА',
+'сеть модных бутиков "У Рэрити, что-ли"',
+'коммерческий космический лифт',
+'элитная женская академия "ле бля дэ"',
+'мухомор софт.ру',
+'частная военная корпорация "Сейлормун"',
+'ресторан "в конце времён"',
+'ферма по выращиванию клонов-штурмовиков',
+'Planet Express',
+'личная армия боевых котиков',
+'хуApple'
+];
+var x;
+
+function Controller($scope, $interval) {
+
+	$scope.names = names;
+	var state;
+
+
+	try{
+		state = $scope.state = angular.fromJson(localStorage.AntiCookieClicker);
+	} catch(e){
+		
+	}
+	if(!state){
+		state = $scope.state = {
+			money: 0,
+			time: Date.now(),
+			buildings: [1]
+		}
+	}
+
+
+	$scope.Math = Math;
+	$scope.pow = Math.pow;
+	$scope.exp = Math.exp;
+	$scope.pi  = Math.PI;
+	
+	$scope.cost = function(index, num){
+		return Math.pow(2, num/12) * Math.pow(2 * Math.PI, index);
+	}
+	$scope.buy = function(i){
+		var cost = $scope.cost(i, $scope.state.buildings[i]);
+		console.log(cost, state.money, cost <= state.money);
+		if(cost <= state.money){
+			$scope.state.buildings[i]++;
+			state.money -= cost;
+		}
+	}
+
+	$scope.getIncome = function(){
+		var income = 0;
+		$scope.state.buildings.forEach(function(num,i){
+			income += num * Math.exp(i);
+		});
+		return income;
+	}
+
+	$scope.recalc = function(){
+		var state = $scope.state;
+		var times = (Date.now() - state.time) / 1000;
+		state.money += times * $scope.getIncome();
+		state.time   = Date.now();
+		localStorage.AntiCookieClicker = angular.toJson(state);
+
+		while($scope.cost(state.buildings.length, 0) < 2 * state.money){
+			state.buildings.push(0);
+		}
+
+
+	};
+
+
+
+	$interval($scope.recalc,100);
+
+}
+
+
+</script>
+
+
+
+
+</body>
+</html> 

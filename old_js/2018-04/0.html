@@ -1,0 +1,44 @@
+
+
+
+
+
+<script type="text/javascript">
+
+
+
+function  nDPoint(n) {
+	return Array(n).fill(0).map(Math.random);
+}
+
+
+function distToInteger(a){
+	return Math.hypot(...a.map(x=>Math.min(x-Math.floor(x), Math.ceil(x)-x)));
+}
+var x = [];
+
+
+
+for(i=0;i<10000;i++){
+	let point = nDPoint(64);
+	x.push(distToInteger(point));
+}
+
+
+var trace = {
+    x: x,
+    type: 'histogram',
+  };
+var data = [trace];
+Plotly.newPlot('myDiv', data);
+
+
+
+
+
+</script>
+
+
+
+
+

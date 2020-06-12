@@ -1,0 +1,141 @@
+
+<canvas id="canvas"></canvas>
+<style>
+body{
+	margin: 0;
+}
+canvas{
+	border: 1px solid;
+}
+</style>
+
+
+
+
+
+<script>
+
+
+
+
+var nums = [];
+var i,j;
+
+const size = 1000;
+
+
+nums[0] = [null];
+nums[1] = [null, true];
+nums[2] = [false];
+
+for(i=3;i<4*size;i++){
+	nums[i] = [];
+}
+
+
+// for(i=3;i<4*size*size;i++){
+// 	nums[i] = [];
+// }
+
+console.log(performance.now());
+
+for(i = 2; i < size; i++)
+for(j = 0; j <=   i; j++)
+{
+	putMultiples(i,j);
+}
+
+console.log(performance.now());
+
+
+function putMultiples(a,b){
+	var i,j, r1, r2;
+	if(nums[a][b] !== false){
+		nums[a][b] = true;
+		// console.log(a,b);
+	}
+	putNumber(a,b, 1, 1);
+	putNumber(a,b, 1,-1);
+
+	// for(i= 2;i<a;i++)
+	for(i= 2;i<a && i*a<size * 2;i++)
+	for(j=-i;j<i;j++){
+		// put a+bi * i+ji
+		putNumber(a,b, i, j);
+		// var re = a*i - b*j;
+		// var im = a*j + b*i;
+		// re = Math.abs(re);
+		// im = Math.abs(im);
+		// nums[Math.max(re, im)][Math.min(re, im)] = false;
+	}
+
+	// console.log(a,b);
+}
+
+///////////////re_1,im_1,re_2,im_2
+function putNumber(a1,b1,a2,b2){
+	var re = a1*a2 - b1*b2;
+	var im = a1*b2 + b1*a2;
+	re = Math.abs(re);
+	im = Math.abs(im);
+	nums[Math.max(re, im)][Math.min(re, im)] = false;
+}
+
+var canvas = document.getElementById('canvas');
+
+canvas.width  = 1e4;
+canvas.height = 1e4;
+
+var ctx = canvas.getContext('2d');
+ctx.setTransform(5,0,0,-5,5000,5000);
+
+ctx.lineWidth = 0.5;
+for(i=-10;i<10;i++){
+	ctx.moveTo(100*i,-1000);
+	ctx.lineTo(100*i, 1000);
+	ctx.moveTo(-1000, 100*i);
+	ctx.lineTo( 1000, 100*i);
+	ctx.stroke();
+}
+
+ctx.lineWidth = 0.01;
+for(i=-100;i<100;i++){
+	ctx.moveTo(10*i,-1000);
+	ctx.lineTo(10*i, 1000);
+	ctx.moveTo(-1000, 10*i);
+	ctx.lineTo( 1000, 10*i);
+	ctx.stroke();
+}
+
+
+
+
+for(i = 1; i <size; i++)
+for(j = 0; j <=  i; j++)
+{
+	// console.log(i,j, nums[i][j]);
+
+	if(nums[i][j]){
+		ctx.fillRect( i, j, 1, 1);
+		ctx.fillRect( i,-j, 1, 1);
+		ctx.fillRect(-i, j, 1, 1);
+		ctx.fillRect(-i,-j, 1, 1);
+
+		ctx.fillRect( j, i, 1, 1);
+		ctx.fillRect( j,-i, 1, 1);
+		ctx.fillRect(-j, i, 1, 1);
+		ctx.fillRect(-j,-i, 1, 1);
+	}
+}
+
+
+
+
+console.log(performance.now());
+
+
+
+
+
+
+</script>

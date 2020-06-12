@@ -1,0 +1,131 @@
+
+<div id="main">
+    <p>
+        Всего птичек: <span id="birdsCount"></span>
+    </p>
+    <p>
+        Готовы к битве: <span id="readyCount"></span>
+    </p>
+        Уступчивость: 
+        <p>
+            Минимальная: <span id="psiMin"></span>
+        </p>
+        Средняя: <span id="psiAvg"></span>
+        <p>
+            Максимальная: <span id="psiMax"></span>
+        </p>
+
+
+</div>
+
+
+
+
+<script>
+
+var model = {
+    reproduceCount: 100,
+    birds: [],
+    init: function(){
+        for(let i=0;i<5000;i++){
+            let newBird = {
+                hp: 100,
+                x: 100,
+                getReady(){return this.hp / this.x}
+            };
+            this.birds.push(newBird);
+        }
+    },
+    round: function(){
+        var birdsInBattle = this.birds.filter(x => x.getReady() >= 1);
+        // console.log(this.birds.length, 'birds alive');
+        // console.log(birdsInBattle.length, 'birds ready for battle');
+        if(birdsInBattle.length > this.reproduceCount){
+            this.battleRound();
+        } else {
+            this.reproduceRound();
+        }
+    },
+    battleRound: function(){
+        var birdsInBattle = this.birds.filter(x => x.getReady() >= 1);
+        // console.log('battle has started', birdsInBattle.length, 'birds are fighting');
+
+        birdsInBattle.forEach(function(bird, index){
+            var enemy = randInArray(birdsInBattle);
+            while(enemy === bird){
+                enemy = randInArray(birdsInBattle);
+            }
+            enemy.hp -= 10 * Math.random() / Math.random();
+        });
+
+        var died = birdsInBattle.filter(x=>!(x.hp > 0));
+        if(died.length){
+            // console.log(died.length, 'died');
+            this.birds = this.birds.filter(x=>x.hp > 0)
+        }
+
+        this.birds.forEach(function(bird){
+            if(birdsInBattle.indexOf(bird) > -1){
+                bird.hp += 1;
+            } else {
+                bird.hp += 2;
+            }
+        });
+    },
+    reproduceRound: function(){
+        var birdsReproduced = this.birds.sort((a,b)=>b.getReady() - a.getReady());
+        birdsReproduced = birdsReproduced.slice(0, this.reproduceCount);
+
+        this.birds.forEach(function(bird){
+            bird.hp += 10;
+        });
+        var model = this;
+        birdsReproduced.forEach(function(bird){
+            var child = {
+                hp: 5,
+                x: Math.max(0, bird.x + 10*Math.random() - 10*Math.random()),
+                getReady(){return this.hp / this.x}
+            };
+            model.birds.push(child);
+        });
+        console.log('родилось потомство');
+    }
+}
+
+function randInArray(array){
+    return array[Math.random()*array.length | 0];
+}
+
+model.init();
+
+function setText(id, text){
+    var element = document.getElementById(id);
+    if(element){
+        element.innerText = text;
+    }
+};
+
+step();
+function step(){
+    model.round();
+    setText('birdsCount', model.birds.length);
+    setText('readyCount', model.birds.filter(x => x.getReady() >= 1).length);
+
+    setText('psiMin', Math.min(...model.birds.map(x=>x.x)));
+    setText('psiMax', Math.max(...model.birds.map(x=>x.x)));
+
+
+    requestAnimationFrame(step);
+}
+
+
+
+
+
+</script>
+
+
+
+
+
+

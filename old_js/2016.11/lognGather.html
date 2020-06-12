@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en" ng-app>
+<head>
+  <meta charset="utf-8">
+  <title>ln(gather)</title>
+  <script src="angular.min.js"></script>
+  <link rel="stylesheet" href="bootstrap.min.css">
+  <link rel="stylesheet" href="bootstrap-theme.min.css">
+</head>
+<body>
+
+
+
+
+
+
+
+
+<div ng-app ng-controller="Controller as vm">
+
+  <div class="container">
+  	<h2>ln(gather)</h2>
+	<h4>Денег: {{vm.totalMoney}}</h4>
+    <div class=row>
+        <div class="col-xs-2 pull-right">
+            <input class="form-control" type="number" ng-model="vm.number" min="0" step="any">
+        </div>
+        <div class="col-xs-3 pull-right">
+
+            <select class="form-control" ng-model="vm.mode" ng-options="type.id as type.desc for type in vm.buyModes">        
+            </select>
+        </div>
+    </div>
+	<table class="table table-bordered">
+	  <thead>
+        <tr>
+            <th colspan="2">Тип здания</th>
+            <th colspan="2">Уровень</th>
+            <th colspan="3">Время ожидания</th>
+        </tr>
+	  	<tr>
+            <th>Номер</th>
+            <th>Размер</th>
+	  		<th>усиления</th>
+            <th>ускорения</th>
+            <th>минимальное</th>
+            <th>оптимальное</th>
+            <th>текущее</th>
+	  		<th>Урожай</th>
+	  		<th></th>
+	  	</tr>
+	  </thead>
+	  <tr ng-repeat="b in vm.buildings track by $index">
+          <td>{{b.type}}</td>
+          <td>{{b.baseSize | number: 0}}</td>
+		  <td>{{b.level | number: 2}}</td>
+          <td>{{b.speedLevel | number: 2}}</td>
+          <td>{{b.baseSize / b.speedLevel | number: 2}} сек</td>
+          <td>{{b.baseSize / b.speedLevel * vm.E | number: 2}} сек</td>
+          <td>{{b.time | number: 2}} сек</td>
+		  <td>
+        <span ng-if="b.money > 0">
+          {{b.money | number:2}}
+        </span>
+       <span class="text-danger" ng-if="b.money <= 0">
+          не готово
+        </span>
+		  </td>
+		  <td>
+		  	<div class="btn-group">
+				  <button class="btn btn-primary" ng-click="vm.gather(b)">
+			  		Собрать
+			  	</button>
+			  	<button class="btn btn-danger" ng-click="vm.upgrade(b, 'level')">
+			  		Усилить
+			  	</button>
+			  	<button class="btn btn-success" ng-click="vm.upgrade(b, 'speedLevel')">
+			  		Ускорить
+			  	</button>
+		  	</div>
+		  </td>
+	  </tr>
+	</table>
+	<button class="btn btn-success" ng-click="vm.tryAdd()">
+		+Добавить({{vm.getNextBuildingCost() | number: 2}})
+	</button>
+  </div>
+<script type="text/javascript">
+
+class Bulding{
+    constructor(type, options = {}){
+        this.type = type;
+        this.baseSize = Math.exp(type);
+        this.level = 1;
+        this.speedLevel = 1;
+        this.timeStamp = Date.now();
+        Object.assign(this, options);
+    }
+    get time(){
+    	return (Date.now() - this.timeStamp) / 1000;
+    }
+    get money(){
+        var timeMultiplier = Math.log(this.ready);
+        return this.baseSize * this.level * timeMultiplier;
+    }
+    get ready(){
+    	return this.time * this.speedLevel / this.baseSize;
+    }
+    gather(){
+        var money = this.money;
+        this.timeStamp = Date.now();
+        return money;
+    }
+    upgrade(money, key = 'level'){
+        if(!['level', 'speedLevel'].includes(key)){
+            return false;
+        }
+        var _money = Math.exp(this[key]) * this.baseSize;
+        _money += money;
+        this[key] = Math.log(_money / this.baseSize);
+        return true;
+    }
+};
+
+
+
+
+function Controller($scope, $interval) {
+	var vm = this;
+	const saveKey = 'LognGather';
+    vm.E = Math.exp(1);
+
+	vm.totalMoney = 0;
+	vm.buildings = [];
+	vm.buildings.push(new Bulding(0));
+	load();
+
+    vm.buyModes = [
+        {id: 'percent', desc: '% денег'},
+        {id: 'money', desc: 'количество денег'},
+        {id: '+level', desc: '+уровень'},
+        {id: 'next', desc: 'до следующего кратного'},
+    ];
+    vm.mode = '+level';
+    vm.number = 1;
+
+    vm.upgrade = function(b, key){
+        switch(vm.mode) {
+          case 'percent':
+              var money = vm.totalMoney;
+              var percent = Math.max(0, Math.min(1, vm.number / 100));
+              upgrade(b, money * percent, key);
+          break;
+          case 'money':
+              var money = Math.min(vm.totalMoney, vm.number);
+              upgrade(b, money, key);
+          break;
+          case '+level':
+              var level = b[key];
+              var _moneyBefore = b.baseSize * Math.exp(level);
+              var _moneyAfter = b.baseSize * Math.exp(level + vm.number);
+              var money = _moneyAfter - _moneyBefore;
+
+              if(vm.totalMoney >= money){
+                upgrade(b, money, key);
+              }
+          case 'next':
+              var level = b[key];
+              var levelAfter = Math.trunc(level / vm.number + 1) * vm.number;
+              if(levelAfter == level) levelAfter += vm.number;
+              var _moneyBefore = b.baseSize * Math.exp(level);
+              var _moneyAfter = b.baseSize * Math.exp(levelAfter);
+              var money = _moneyAfter - _moneyBefore;
+
+              if(vm.totalMoney >= money){
+                upgrade(b, money, key);
+              }
+          break;
+        }
+    }
+
+    function upgrade(b, money, key){
+        b.upgrade(money, key);
+        vm.totalMoney -= money;
+    }
+
+	vm.gather = function(b){
+		if(b.money > 0){
+			vm.totalMoney += b.gather();
+		}
+	}
+
+
+	function save(){
+		localStorage[saveKey] = angular.toJson({
+			buildings: vm.buildings,
+			totalMoney: vm.totalMoney
+		});
+	}
+
+	function load(){
+		var data = localStorage[saveKey];
+		try{
+			let parsed = angular.fromJson(data);
+			vm.totalMoney = parsed.totalMoney;
+			vm.buildings = parsed.buildings.map(b=> new Bulding(0, b));
+		} catch(e){
+
+		}
+	}
+	vm.getNextBuildingCost = function(){
+		var level = vm.buildings.length;
+		var cost = 2 * Math.exp(level + 1);
+		return cost;
+	}
+
+	vm.tryAdd = function(){
+		var level = vm.buildings.length;
+		var cost = 2 * Math.exp(level + 1);
+		if(vm.totalMoney > cost){
+			vm.buildings.push(new Bulding(level));
+            vm.totalMoney -= cost;
+		}
+	}
+
+	function step(){
+		save();
+	}
+
+	$interval(step, 100);
+}
+
+
+</script>
+
+
+
+
+</body>
+</html> 

@@ -1,0 +1,270 @@
+<html>
+  <head>
+    <title></title>
+    <meta content="">
+    <style>
+	#viewport{
+		background: #171717;
+		height: 100%;
+		margin: 0;
+	}
+	.pjs-meta{
+		color:#00ff00;
+	}
+	*{
+		margin: 0;
+	}
+
+
+
+    </style>
+  </head>
+  <body>
+
+
+  	<div id="viewport" style="">
+  	</div>
+  	<script src="physicsjs-full.js"></script>
+  	<script src="interaction.js"></script>
+  	<script src="interaction_f.js"></script>
+  	<script src="acceleration.js"></script>
+  	<script type="text/javascript">
+		Physics(function(world){
+		  window.fric = - 0.001;
+		  var viewWidth  = window.innerWidth;
+		  var viewHeight = window.innerHeight;
+		  var center = new Physics.vector( viewWidth/2, viewHeight/2);
+
+	      world.on('step', function () {
+	          world.render();
+	      });
+
+		  var renderer = Physics.renderer('canvas', {
+		    el: 'viewport',
+		    width: viewWidth,
+		    height: viewHeight,
+		    meta: true,
+		    styles: {
+		        // set colors for the circle bodies
+		        'circle' : {
+		            fillStyle: '#0f0'
+		        },
+		        'ion-p' : {
+		            fillStyle: '#f00'
+		        },
+		        'ion-n' : {
+		            fillStyle: '#f00'
+		        }
+		    }
+		  });
+
+		 // add the renderer
+		  world.add( renderer );
+		  // render on each step
+		  world.on('step', function(){
+		    world.render();
+		  });
+		  window.world = world;
+
+		  // bounds of the window
+		  var viewportBounds = Physics.aabb(0, 0, viewWidth, viewHeight);
+
+
+
+
+
+
+
+		  for(var i=0;i<300;i++)
+		  // for(var j=0;j<10;j++)
+		  {
+
+		  	  var x = viewWidth  * Math.random();
+		  	  var y = viewHeight * Math.random();
+		  	  // var x = 500 + 50*i;
+		  	  // var y = 100 + 50*j;
+
+		  	  var mass = 1;
+		  	  var tt = i%5;
+		  	  var color = [
+		  	  	'#f00',
+		  	  	'#ff0',
+		  	  	'#0f0',
+		  	  	'#0ff',
+		  	  	'#70f'
+		  	  ][tt]
+
+
+		  	  // if(i<5){
+			  	 //  var color = "#ff0";
+			  	 //  var tt = 0;
+		  	  // } else {
+			  	 //  var color = "#00f";
+			  	 //  var tt = 1;
+			  	 //  mass = 0.1
+		  	  // }
+
+			  var body = Physics.body('circle', {
+			        x: x,
+			        y: y,
+			        radius: 3,
+			        mass: mass, 
+			        tt: tt,
+			        styles : {
+					  	fillStyle: color
+					}
+			      });
+
+			  // body.options({radius:15});
+			  body.recalc();
+			  world.add(body);
+		  };
+
+
+
+		  world.add(Physics.behavior('edge-collision-detection', {
+		      aabb: viewportBounds,
+		      restitution: 0.99,
+		      cof: 0.99
+		  }));
+		  // ensure objects bounce when edge collision is detected
+		  world.add( Physics.behavior('body-impulse-response') );
+		  // world.add( Physics.behavior('body-collision-detection') );
+
+		  world.add([
+		    Physics.behavior('sweep-prune')
+		  ]);
+
+
+	    var attractor = Physics.behavior('attractor', {
+	        order: 0,
+	        strength: .002
+	    });
+	    world.on({
+	        'interact:poke': function( pos ){
+	            world.wakeUpAll();
+	            attractor.position( pos );
+	            world.add( attractor );
+	        }
+	        ,'interact:move': function( pos ){
+	            attractor.position( pos );
+	        }
+	        ,'interact:release': function(){
+	            world.wakeUpAll();
+	            world.remove( attractor );
+	        }
+	    });
+	    world.add( Physics.behavior('interactive', { el: renderer.container }));
+
+
+
+		  // world.add( Physics.behavior('interaction', { strength: -1e16, degree:12, min:10 }));
+		  // world.add( Physics.behavior('interaction', { strength:  1e6 , degree:6,  min:10 }));
+
+		  var coff = [
+		  		[ 0, 1, 0, 0, 1],
+		  		[ 1, 0, 1, 0, 0],
+		  		[ 0, 1, 0, 1, 0],
+		  		[ 0, 0, 1, 0, 1],
+		  		[ 1, 0, 0, 1, 0]
+		  ];
+
+		  // var coff = [
+		  // 		[ 0, 0, 0, 0, 0],
+		  // 		[ 0, 0, 0, 0, 0],
+		  // 		[ 0, 0, 0, 0, 0],
+		  // 		[ 0, 0, 0, 0, 0],
+		  // 		[ 0, 0, 0, 0, 0]
+		  // ];
+
+
+		  world.add( Physics.behavior('interaction-func', {
+		  		func: function(body1, body2){
+		  			// distance vector
+		  			var dr = new Physics.vector(body1.state.pos)
+		  				.vsub(new Physics.vector(body2.state.pos));
+		  			// distance scalar
+		  			var r  = dr.norm();
+		  			var _r = r / 50;
+		  			// force (negative means attraction)
+		  			var F = 0;
+		  			// var F = Math.pow(_r, -12) - Math.pow(_r, -6);
+		  			F += Math.pow(_r, -12);
+
+				  	F -= coff[body1.tt][body2.tt] * Math.pow(_r, -6) * 5;
+				  	// F -= Math.pow(_r, -6);
+
+
+		  			if(body1.charge && body2.charge){
+		  				F += body1.charge * body2.charge * Math.pow(_r, -2) * 2
+		  			}
+
+
+
+		  			var m = 1e3;
+		  			if(F >  m) F =  m;
+		  			if(F < -m) F = -m;
+		  			if(Math.abs(F)<0.001){
+		  				return false;
+		  			}
+
+		  			F = new Physics.vector(dr)
+		  				.mult( F / r / 1e4);
+		  			return new Physics.vector( F );
+				}
+			}
+		  	));
+
+
+ 		  window.tenzor = [-1e-6, 0, 0, -1e-6];
+ 		  window.tenzor = [ 0, 0, 0, 0];
+		  world.add( Physics.behavior('custom-acceleration',{
+		  		func : function(body){
+		  			var v = new Physics.vector(body.state.vel);
+		  			v.mult(fric);
+
+		  			var _r = body.state.pos
+		  				.clone()
+		  				.vsub(center);
+
+		  			v.add( _r.x * tenzor[0] +_r.y * tenzor[1],
+						   _r.x * tenzor[2] +_r.y * tenzor[3]
+		  			);
+
+
+		  			// v.vsub(
+		  			// 	 body.state.pos
+		  			// 	.clone()
+		  			// 	.vsub(center)
+		  			// 	.mult(1e-6) 
+		  			// );
+
+		  			// v = {x:0,y:0};
+		  			// v.add( (Math.random()-0.5)/1e3 , (Math.random()-0.5)/1e3 );
+		  			// v.add(0, 0.00004);
+		  			return v;
+		  		}
+		  }));
+
+
+
+
+
+		  // subscribe to ticker to advance the simulation
+		  Physics.util.ticker.on(function( time, dt ){
+		      world.step( time );
+		  });
+
+		  // start the ticker
+		  Physics.util.ticker.start();
+
+		});
+
+
+  	</script>
+
+
+
+
+  </body>
+</html>

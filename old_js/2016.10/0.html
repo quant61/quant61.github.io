@@ -1,0 +1,118 @@
+
+
+<script src="sha1.js">
+</script>
+
+<script>
+
+function fromHex(x){
+    return parseInt(x,16);
+}
+
+var sumE = (s,c,i)=>s + c*Math.exp(i);
+
+var canHit = (x,mask)=>(x.bitmask & mask) === mask;
+
+
+
+
+
+
+
+function getTower(...index){
+    if(!index.every(x=>Number.isInteger(x))) return false;
+    if(!index.every(x=>x>=0)) return false;
+    while(index[index.length-1]===0){
+        index.pop();
+    }
+    if(!index.length) return false;
+
+    var sha = sha1(JSON.stringify(index));
+    var valid = sha[0] === "0";
+    if(!valid) return false;
+
+    var tower = {};
+    tower.cost = index;
+    tower.costStr = index+"";
+    tower.costSum = index.reduce(sumE);
+    tower.type = sha[1];
+    // tower.sha = sha;
+    
+    var bitmask = sha.substr(2,2);
+    bitmask = fromHex(bitmask);
+    tower.bitmask = bitmask;
+    var bitmaskStr = (256+bitmask).toString(2).substr(1).split("").reverse().join("");
+    tower.bitmaskStr = bitmaskStr;
+
+    var nums = sha.match(/.{8}/g).map(fromHex).map(x=>x/(2**32-x));
+    tower.DMG = (nums[1] * nums[4]);
+    tower.RNG = (nums[2] * nums[4]) ** (1/2);
+    tower.SPD = (nums[3] * nums[4]) ** (1/3);
+
+    // tower.nums = nums;
+    return tower;
+}
+
+
+function ff1(max = 100){
+    var towers = [];
+
+    var cost = [0,0,0,0,0,0,0,0];
+
+    var calcs = 0;
+    var t = performance.now();
+
+    while(cost.reduce(sumE) <= max){
+        cost[0]++;
+        let type = 1;
+        while(cost.reduce(sumE) > max && Math.exp(type) < max){
+            cost[type - 1] = 0;
+            cost[type] ++;
+            type++;
+        }
+        let tower = getTower(...cost);
+        calcs++;
+        if(tower){
+            towers.push(tower);
+        }
+    }
+    console.log(calcs, 'for', performance.now());
+    return towers;
+}
+
+var towers = [];
+var t = performance.now();
+
+for(var i=0;i<1e6;i++){
+    let tower = getTower(0,i);
+    if(tower){
+        towers.push(tower);
+    }
+}
+
+console.log(performance.now() - t);
+
+
+
+
+
+// for(var i=0;i<1000;i++)
+// for(var j=0;j<100;j++)
+// for(var k=0;k<10;k++)
+// {
+//     let tower = getTower(i,j,k);
+//     if(tower){
+//         towers.push(tower);
+//     }
+// }
+
+
+
+
+
+
+
+
+
+
+</script>
