@@ -1,0 +1,75 @@
+<button onclick="gather()">
+	gather
+</button>
+<br>
+<button onclick="upgrade()">
+	upgrade
+</button>
+
+<ul>
+	<li>short, fast and simple idle game</li>
+	<li>written in less than hour</li>
+	<li>can be beaten in several mintues: You go to infinity. (actually, float64 can't handle such big number: >1e308)</li>
+  <li>date: 2022-11-01</li>
+</ul>
+
+
+<p id="x"></p>
+<p id="power"></p>
+<p id="newpower"></p>
+<p id="dt"></p>
+<p id="dx"></p>
+
+<script>
+let x = 0;
+let power = 1;
+let t0 = Date.now();
+
+function render(){
+	document.getElementById('x').innerText = `x = ${x}`
+	document.getElementById('power').innerText = `power = ${power}`
+	document.getElementById('dt').innerText = `dt = ${get_dt()}`
+	document.getElementById('dx').innerText = `dx = dt^power = ${get_dx()}`
+	let newpower = get_newpower();
+	if(newpower > power) {
+		document.getElementById('newpower').innerText = `newpower = ln(x+dx) = ${newpower}`
+	}
+
+	requestAnimationFrame(render)
+}
+
+requestAnimationFrame(render)
+
+function get_dt(){
+	return (Date.now()-t0)/1e3;
+}
+
+function get_dx(){
+	return get_dt()**power;
+}
+
+
+function gather(){
+	let dt = get_dt();
+	let dx = get_dx();
+	x += dx
+	console.log({dt, power, dx, x});
+	t0 = Date.now();
+}
+
+function get_newpower(){
+	return Math.log(x + get_dx());
+}
+
+function upgrade(){
+	gather();
+	let newpower = get_newpower();
+	if(newpower > power) {
+		power = newpower;
+		x = 0;
+		t = Date.now();
+	}
+}
+
+
+</script>
